@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>my mixtape</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --glass: rgba(255,255,255,0.14);
+    --glass-strong: rgba(255,255,255,0.22);
+    --border: rgba(255,255,255,0.38);
+    --text: #ffffff;
+    --text-dim: rgba(255,255,255,0.72);
+    --text-faint: rgba(255,255,255,0.5);
+    --accent1: #FF7A59;
+    --accent2: #FFC857;
+    --shadow: 0 8px 32px rgba(0,0,0,0.28);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:'Inter', sans-serif;
+    color:var(--text);
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    overflow-x:hidden;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  }
+
+  /* ---------- background ---------- */
+  .bg{
+    position:fixed; inset:0; z-index:-2;
+    background: linear-gradient(120deg,#2b1055,#7597de 35%,#ff7a59 70%,#ffc857);
+    background-size:300% 300%;
+    animation: drift 18s ease-in-out infinite;
+  }
+  .bg.has-image{ animation:none; background-size:cover; background-position:center; }
+  @keyframes drift{
+    0%{background-position:0% 50%;}
+    50%{background-position:100% 50%;}
+    100%{background-position:0% 50%;}
+  }
+  .bg-overlay{
+    position:fixed; inset:0; z-index:-1;
+    background: rgba(10,8,20,0.28);
+    backdrop-filter: blur(0px);
+  }
+
+
+  /* ---------- layout ---------- */
+  .app{
+    width:100%; max-width:420px;
+    padding:56px 20px 60px;
+    display:flex; flex-direction:column; align-items:center;
+    gap:22px;
+  }
+
+  .fade-up{ opacity:0; transform:translateY(16px); animation:fadeUp .7s cubic-bezier(.2,.7,.3,1) forwards; }
+  @keyframes fadeUp{ to{opacity:1; transform:translateY(0);} }
+
+  /* ---------- profile ---------- */
+  .profile{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:10px; }
+  .avatar{
+    position:relative; width:104px; height:104px; border-radius:50%;
+    background:linear-gradient(135deg,var(--accent1),var(--accent2));
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Poppins',sans-serif; font-weight:700; font-size:38px; color:#fff;
+    border:3px solid rgba(255,255,255,0.55);
+    box-shadow:var(--shadow);
+    cursor:pointer; overflow:hidden;
+    transition:transform .25s ease;
+  }
+  .avatar:hover{ transform:scale(1.04); }
+  .avatar img{ width:100%; height:100%; object-fit:cover; }
+  .avatar .cam{
+    position:absolute; bottom:2px; right:2px; width:26px; height:26px; border-radius:50%;
+    background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.5);
+    display:flex; align-items:center; justify-content:center; font-size:12px;
+  }
+  .name{
+    font-family:'Poppins',sans-serif; font-weight:700; font-size:22px;
+    outline:none; cursor:text; min-width:40px;
+  }
+  .caption{
+    font-size:13.5px; color:var(--text-dim); outline:none; cursor:text;
+    max-width:280px; line-height:1.4;
+  }
+  [contenteditable]:focus{ color:var(--text); }
+  [contenteditable]:empty:before{ content: attr(data-placeholder); color:var(--text-faint); }
+
+  /* ---------- glass card base ---------- */
+  .card{
+    width:100%;
+    background:var(--glass);
+    border:1px solid var(--border);
+    border-radius:26px;
+    backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
+    box-shadow:var(--shadow);
+    padding:22px 22px 18px;
+  }
+
+  /* ---------- now playing ---------- */
+  .art-wrap{ position:relative; width:150px; height:150px; margin:0 auto 16px; }
+  .art-ring{
+    position:absolute; inset:-8px; border-radius:50%;
+    background:conic-gradient(from 0deg, var(--accent1), var(--accent2), var(--accent1));
+    opacity:0; filter:blur(2px);
+    animation:spin 6s linear infinite;
+  }
+  .art-ring.playing{ opacity:0.85; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .art{
+    position:absolute; inset:0; width:150px; height:150px; border-radius:50%;
+    object-fit:cover; border:3px solid rgba(255,255,255,0.6);
+    background:linear-gradient(135deg,#444,#222);
+  }
+  .art.spinning{ animation:spin 8s linear infinite; }
+
+  .track-title{ font-family:'Poppins',sans-serif; font-weight:600; font-size:17px; text-align:center; }
+  .track-artist{ font-size:13px; color:var(--text-dim); text-align:center; margin-top:2px; }
+
+  .progress-row{ display:flex; align-items:center; gap:8px; margin:16px 0 6px; }
+  .time{ font-size:11px; color:var(--text-faint); width:32px; text-align:center; font-variant-numeric:tabular-nums; }
+  .progress-bar{
+    position:relative; flex:1; height:5px; border-radius:4px; background:rgba(255,255,255,0.25);
+    cursor:pointer;
+  }
+  .progress-fill{
+    position:absolute; left:0; top:0; height:100%; width:0%;
+    background:linear-gradient(90deg,var(--accent1),var(--accent2));
+    border-radius:4px;
+  }
+  .progress-handle{
+    position:absolute; top:50%; left:0%; width:11px; height:11px; border-radius:50%;
+    background:#fff; transform:translate(-50%,-50%); box-shadow:0 0 0 3px rgba(255,255,255,0.25);
+  }
+
+  .controls{ display:flex; align-items:center; justify-content:center; gap:14px; margin-top:8px; }
+  .icon-btn{
+    background:none; border:none; color:var(--text); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    padding:8px; border-radius:50%; transition:background .2s ease, transform .15s ease;
+  }
+  .icon-btn:hover{ background:rgba(255,255,255,0.14); }
+  .icon-btn:active{ transform:scale(0.9); }
+  .icon-btn.small{ opacity:0.6; padding:6px; }
+  .icon-btn.small.active{ opacity:1; color:var(--accent2); }
+  .icon-btn.play{
+    width:54px; height:54px;
+    background:linear-gradient(135deg,var(--accent1),var(--accent2));
+    box-shadow:0 6px 18px rgba(255,122,89,0.45);
+  }
+  .icon-btn.play:hover{ background:linear-gradient(135deg,var(--accent1),var(--accent2)); filter:brightness(1.08); }
+
+  /* ---------- playlist ---------- */
+  .playlist-header{
+    font-family:'Poppins',sans-serif; font-weight:600; font-size:15px;
+    margin-bottom:12px; color:var(--text);
+  }
+  .playlist-list{ display:flex; flex-direction:column; gap:6px; max-height:320px; overflow-y:auto; }
+  .playlist-list::-webkit-scrollbar{ width:4px; }
+  .playlist-list::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.25); border-radius:4px; }
+
+  .track-row{
+    display:flex; align-items:center; gap:12px; padding:8px 10px; border-radius:16px;
+    cursor:pointer; transition:background .2s ease, transform .15s ease;
+    border:1px solid transparent;
+  }
+  .track-row:hover{ background:rgba(255,255,255,0.1); }
+  .track-row.active{
+    background:rgba(255,255,255,0.16); border-color:var(--border);
+  }
+  .track-thumb{ width:42px; height:42px; border-radius:10px; object-fit:cover; flex-shrink:0; background:#333; }
+  .track-meta{ flex:1; min-width:0; }
+  .track-meta .t{ font-size:13.5px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .track-meta .a{ font-size:11.5px; color:var(--text-faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .eq{ display:flex; align-items:flex-end; gap:2px; height:14px; width:14px; flex-shrink:0; }
+  .eq span{ width:3px; background:var(--accent2); border-radius:2px; animation:eq 0.9s ease-in-out infinite; }
+  .eq span:nth-child(1){ height:40%; animation-delay:0s; }
+  .eq span:nth-child(2){ height:100%; animation-delay:0.2s; }
+  .eq span:nth-child(3){ height:65%; animation-delay:0.4s; }
+  @keyframes eq{ 0%,100%{ transform:scaleY(0.4);} 50%{ transform:scaleY(1);} }
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:rgba(20,16,30,0.9); border:1px solid var(--border); color:var(--text);
+    padding:10px 18px; border-radius:14px; font-size:13px; opacity:0; transition:all .3s ease;
+    z-index:60; pointer-events:none;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="bg" id="bg"></div>
+<div class="bg-overlay"></div>
+
+<div class="app">
+
+  <div class="profile fade-up" style="animation-delay:.05s">
+    <div class="avatar" id="avatar" title="Tap to change photo">
+      <span id="avatarInitial">Y</span>
+      <img id="avatarImg" style="display:none">
+      <div class="cam">✎</div>
+      <input type="file" id="avatarFile" accept="image/*" hidden>
+    </div>
+    <div class="name" id="name" contenteditable="true" data-placeholder="Your name">Your Name</div>
+    <div class="caption" id="caption" contenteditable="true" data-placeholder="write a caption...">tell everyone what's on your mind ✨</div>
+  </div>
+
+  <div class="card fade-up" style="animation-delay:.15s">
+    <div class="art-wrap">
+      <div class="art-ring" id="artRing"></div>
+      <img class="art" id="art" alt="">
+    </div>
+    <div class="track-title" id="trackTitle">Pick a song below</div>
+    <div class="track-artist" id="trackArtist">—</div>
+
+    <div class="progress-row">
+      <span class="time" id="curTime">0:00</span>
+      <div class="progress-bar" id="progressBar">
+        <div class="progress-fill" id="progressFill"></div>
+        <div class="progress-handle" id="progressHandle"></div>
+      </div>
+      <span class="time" id="durTime">0:00</span>
+    </div>
+
+    <div class="controls">
+      <button class="icon-btn small" id="shuffleBtn" title="Shuffle">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+      </button>
+      <button class="icon-btn" id="prevBtn" title="Previous">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zM20 6L9 12l11 6z"/></svg>
+      </button>
+      <button class="icon-btn play" id="playBtn" title="Play">
+        <svg id="playIcon" width="22" height="22" viewBox="0 0 24 24" fill="#241000"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <button class="icon-btn" id="nextBtn" title="Next">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM4 6l11 6-11 6z"/></svg>
+      </button>
+      <button class="icon-btn small" id="repeatBtn" title="Repeat">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="card fade-up" style="animation-delay:.25s">
+    <div class="playlist-header">Many more</div>
+    <div class="playlist-list" id="playlistList"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="ytHolder" style="position:fixed; width:1px; height:1px; overflow:hidden; opacity:0; pointer-events:none;">
+  <div id="ytPlayer"></div>
+</div>
+
+<script>
+/* ================= storage helpers (best-effort, safe to fail) ================= */
+async function storeGet(key){
+  try{ const r = await window.storage.get(key, false); return r ? r.value : null; }
+  catch(e){ return null; }
+}
+async function storeSet(key, value){
+  try{ await window.storage.set(key, value, false); }
+  catch(e){ /* ignore */ }
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._h);
+  showToast._h = setTimeout(()=> t.classList.remove('show'), 2200);
+}
+
+/* =====================================================================
+   YOUR PLAYLIST — edit this array directly.
+   "id" is the YouTube video ID: the part after watch?v= in the URL
+   (e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ -> dQw4w9WgXcQ)
+   "art" is optional — a direct image URL to use as the cover art
+   instead of the auto-fetched YouTube thumbnail. Leave it out (or
+   delete the line) to just use the YouTube thumbnail.
+   ===================================================================== */
+const playlist = [
+  { id:'dQw4w9WgXcQ', title:'Never Gonna Give You Up', artist:'Rick Astley', art:'' },
+  { id:'fJ9rUzIMcZQ', title:'Bohemian Rhapsody', artist:'Queen', art:'' },
+  { id:'JGwWNGJdvx8', title:'Shape of You', artist:'Ed Sheeran', art:'' },
+  { id:'kJQP7kiw5Fk', title:'Despacito', artist:'Luis Fonsi ft. Daddy Yankee', art:'' }
+];
+
+/* =====================================================================
+   BACKGROUND — your default GIF. Swap this URL for a different one
+   any time; the 🖼️ button in the app lets you override it per-device.
+   ===================================================================== */
+const DEFAULT_BG_URL = 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmloOW8yYm1yYmM2eTBycDlyOTQzOWl6NHJibHRuaWtzdTJsbmt5YiZlcD12MV9naWZzX3JlbGF0ZWQmY3Q9Zw/vLi3T5m3RH45y/giphy.gif';
+
+let currentIndex = 0;
+let isShuffle = false;
+let isRepeat = false;
+let player = null;
+let playerReady = false;
+let progressTimer = null;
+let isDraggingSeek = false;
+
+function fmtTime(sec){
+  if(!isFinite(sec) || sec < 0) sec = 0;
+  const m = Math.floor(sec/60);
+  const s = Math.floor(sec%60).toString().padStart(2,'0');
+  return `${m}:${s}`;
+}
+
+/* ================= render playlist ================= */
+function renderPlaylist(){
+  const list = document.getElementById('playlistList');
+  list.innerHTML = '';
+  playlist.forEach((track, i)=>{
+    const row = document.createElement('div');
+    row.className = 'track-row' + (i === currentIndex ? ' active' : '');
+    row.innerHTML = `
+      <img class="track-thumb" src="${track.art || `https://img.youtube.com/vi/${track.id}/default.jpg`}" alt="">
+      <div class="track-meta">
+        <div class="t">${escapeHtml(track.title)}</div>
+        <div class="a">${escapeHtml(track.artist)}</div>
+      </div>
+      ${i === currentIndex ? '<div class="eq"><span></span><span></span><span></span></div>' : ''}
+    `;
+    row.addEventListener('click', ()=> loadTrack(i, true));
+    list.appendChild(row);
+  });
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+/* ================= player logic ================= */
+function loadTrack(index, autoplay){
+  if(playlist.length === 0) return;
+  currentIndex = ((index % playlist.length) + playlist.length) % playlist.length;
+  const track = playlist[currentIndex];
+  document.getElementById('trackTitle').textContent = track.title;
+  document.getElementById('trackArtist').textContent = track.artist;
+  document.getElementById('art').src = track.art || `https://img.youtube.com/vi/${track.id}/hqdefault.jpg`;
+  renderPlaylist();
+  resetProgressUI();
+  if(playerReady && player){
+    if(autoplay){ player.loadVideoById(track.id); }
+    else { player.cueVideoById(track.id); }
+  }
+}
+
+function resetProgressUI(){
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('progressHandle').style.left = '0%';
+  document.getElementById('curTime').textContent = '0:00';
+  document.getElementById('durTime').textContent = '0:00';
+}
+
+function setPlayingVisual(playing){
+  document.getElementById('artRing').classList.toggle('playing', playing);
+  document.getElementById('art').classList.toggle('spinning', playing);
+  const icon = document.getElementById('playIcon');
+  icon.innerHTML = playing
+    ? '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>'
+    : '<path d="M8 5v14l11-7z"/>';
+}
+
+function togglePlay(){
+  if(!playerReady || playlist.length === 0) return;
+  const state = player.getPlayerState();
+  if(state === 1){ player.pauseVideo(); }
+  else { player.playVideo(); }
+}
+
+function playNext(manual){
+  if(playlist.length === 0) return;
+  let next;
+  if(isShuffle && playlist.length > 1){
+    do{ next = Math.floor(Math.random()*playlist.length); } while(next === currentIndex);
+  } else {
+    next = currentIndex + 1;
+  }
+  loadTrack(next, true);
+}
+function playPrev(){
+  if(playlist.length === 0) return;
+  loadTrack(currentIndex - 1, true);
+}
+
+function startProgressTimer(){
+  clearInterval(progressTimer);
+  progressTimer = setInterval(()=>{
+    if(!playerReady || isDraggingSeek) return;
+    try{
+      const dur = player.getDuration();
+      const cur = player.getCurrentTime();
+      if(dur > 0){
+        document.getElementById('progressFill').style.width = (cur/dur*100)+'%';
+        document.getElementById('progressHandle').style.left = (cur/dur*100)+'%';
+        document.getElementById('curTime').textContent = fmtTime(cur);
+        document.getElementById('durTime').textContent = fmtTime(dur);
+      }
+    }catch(e){}
+  }, 400);
+}
+
+/* ================= YouTube IFrame API ================= */
+function onYouTubeIframeAPIReady(){
+  player = new YT.Player('ytPlayer', {
+    height:'1', width:'1',
+    videoId: playlist.length ? playlist[currentIndex].id : undefined,
+    playerVars:{ playsinline:1 },
+    events:{
+      onReady: ()=>{
+        playerReady = true;
+        startProgressTimer();
+      },
+      onStateChange: (e)=>{
+        if(e.data === YT.PlayerState.PLAYING){ setPlayingVisual(true); }
+        if(e.data === YT.PlayerState.PAUSED){ setPlayingVisual(false); }
+        if(e.data === YT.PlayerState.ENDED){
+          setPlayingVisual(false);
+          if(isRepeat){ player.seekTo(0); player.playVideo(); }
+          else { playNext(false); }
+        }
+      }
+    }
+  });
+}
+const ytScript = document.createElement('script');
+ytScript.src = 'https://www.youtube.com/iframe_api';
+document.head.appendChild(ytScript);
+
+/* ================= wire up controls ================= */
+document.getElementById('playBtn').addEventListener('click', togglePlay);
+document.getElementById('nextBtn').addEventListener('click', ()=>playNext(true));
+document.getElementById('prevBtn').addEventListener('click', playPrev);
+document.getElementById('shuffleBtn').addEventListener('click', (e)=>{
+  isShuffle = !isShuffle;
+  e.currentTarget.classList.toggle('active', isShuffle);
+  showToast(isShuffle ? 'Shuffle on' : 'Shuffle off');
+});
+document.getElementById('repeatBtn').addEventListener('click', (e)=>{
+  isRepeat = !isRepeat;
+  e.currentTarget.classList.toggle('active', isRepeat);
+  showToast(isRepeat ? 'Repeat on' : 'Repeat off');
+});
+
+const progressBar = document.getElementById('progressBar');
+function seekFromEvent(e){
+  const rect = progressBar.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  let ratio = (clientX - rect.left) / rect.width;
+  ratio = Math.max(0, Math.min(1, ratio));
+  document.getElementById('progressFill').style.width = (ratio*100)+'%';
+  document.getElementById('progressHandle').style.left = (ratio*100)+'%';
+  if(playerReady){
+    const dur = player.getDuration();
+    if(dur > 0){ player.seekTo(dur*ratio, true); }
+  }
+}
+progressBar.addEventListener('mousedown', (e)=>{ isDraggingSeek = true; seekFromEvent(e); });
+window.addEventListener('mousemove', (e)=>{ if(isDraggingSeek) seekFromEvent(e); });
+window.addEventListener('mouseup', ()=>{ isDraggingSeek = false; });
+progressBar.addEventListener('touchstart', (e)=>{ isDraggingSeek = true; seekFromEvent(e); });
+progressBar.addEventListener('touchmove', (e)=>{ if(isDraggingSeek) seekFromEvent(e); });
+progressBar.addEventListener('touchend', ()=>{ isDraggingSeek = false; });
+
+/* ================= profile: name / caption / avatar ================= */
+const nameEl = document.getElementById('name');
+const captionEl = document.getElementById('caption');
+nameEl.addEventListener('blur', ()=> storeSet('profileName', nameEl.textContent.trim()));
+captionEl.addEventListener('blur', ()=> storeSet('profileCaption', captionEl.textContent.trim()));
+
+const avatar = document.getElementById('avatar');
+const avatarFile = document.getElementById('avatarFile');
+avatar.addEventListener('click', ()=> avatarFile.click());
+avatarFile.addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev)=>{
+    const dataUrl = ev.target.result;
+    document.getElementById('avatarImg').src = dataUrl;
+    document.getElementById('avatarImg').style.display = 'block';
+    document.getElementById('avatarInitial').style.display = 'none';
+    await storeSet('avatarImg', dataUrl);
+    showToast('Profile photo updated');
+  };
+  reader.readAsDataURL(file);
+});
+
+function applyBackground(url){
+  const bg = document.getElementById('bg');
+  bg.style.backgroundImage = `url(${url})`;
+  bg.classList.add('has-image');
+}
+
+/* ================= boot ================= */
+async function boot(){
+  const savedName = await storeGet('profileName');
+  const savedCaption = await storeGet('profileCaption');
+  const savedAvatar = await storeGet('avatarImg');
+
+  if(savedName){ nameEl.textContent = savedName; }
+  if(savedCaption){ captionEl.textContent = savedCaption; }
+  if(savedAvatar){
+    document.getElementById('avatarImg').src = savedAvatar;
+    document.getElementById('avatarImg').style.display = 'block';
+    document.getElementById('avatarInitial').style.display = 'none';
+  }
+  applyBackground(DEFAULT_BG_URL);
+
+  renderPlaylist();
+  if(playlist.length){
+    document.getElementById('trackTitle').textContent = playlist[currentIndex].title;
+    document.getElementById('trackArtist').textContent = playlist[currentIndex].artist;
+    document.getElementById('art').src = playlist[currentIndex].art || `https://img.youtube.com/vi/${playlist[currentIndex].id}/hqdefault.jpg`;
+  }
+}
+boot();
+</script>
+</body>
+</html>
