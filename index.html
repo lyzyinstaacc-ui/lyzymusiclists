@@ -86,6 +86,7 @@
   .social-row{ display:flex; gap:10px; margin-top:4px; flex-wrap:wrap; justify-content:center; }
   .social-row:empty{ display:none; }
   .social-btn{
+    position:relative; overflow:hidden;
     width:38px; height:38px; border-radius:50%;
     background:var(--glass); border:1px solid var(--border);
     backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
@@ -121,11 +122,42 @@
     position:absolute; inset:0; width:150px; height:150px; border-radius:50%;
     object-fit:cover; border:3px solid rgba(255,255,255,0.6);
     background:linear-gradient(135deg,#444,#222);
+    transition:opacity .22s ease;
   }
   .art.spinning{ animation:spin 8s linear infinite; }
 
-  .track-title{ font-family:'Poppins',sans-serif; font-weight:600; font-size:17px; text-align:center; }
+  .np-fade{ transition:opacity .22s ease; }
+
+  .track-title-wrap{ overflow:hidden; position:relative; }
+  .track-title{ font-family:'Poppins',sans-serif; font-weight:600; font-size:17px; text-align:center; white-space:nowrap; display:inline-block; width:100%; }
+  .track-title-wrap.marquee .track-title{
+    display:inline-block; width:max-content; padding-right:40px;
+    animation:marquee var(--marquee-duration,8s) linear infinite;
+  }
+  @keyframes marquee{
+    0%, 12%{ transform:translateX(0); }
+    88%, 100%{ transform:translateX(calc(-1 * var(--marquee-distance, 100px))); }
+  }
   .track-artist{ font-size:13px; color:var(--text-dim); text-align:center; margin-top:2px; }
+
+  .note-particle{
+    position:absolute; pointer-events:none; font-size:15px; color:var(--accent2);
+    animation:noteFloat 2.2s ease-out forwards; z-index:5;
+  }
+  @keyframes noteFloat{
+    0%{ opacity:0; transform:translate(0,0) scale(.6) rotate(0deg); }
+    15%{ opacity:1; }
+    100%{ opacity:0; transform:translate(var(--note-x,10px),-90px) scale(1) rotate(20deg); }
+  }
+
+  .ripple{
+    position:absolute; border-radius:50%; background:rgba(255,255,255,0.55);
+    transform:scale(0); animation:rippleAnim .55s ease-out forwards;
+    pointer-events:none;
+  }
+  @keyframes rippleAnim{
+    to{ transform:scale(1); opacity:0; }
+  }
 
   .progress-row{ display:flex; align-items:center; gap:8px; margin:16px 0 6px; }
   .time{ font-size:11px; color:var(--text-faint); width:32px; text-align:center; font-variant-numeric:tabular-nums; }
@@ -145,6 +177,7 @@
 
   .controls{ display:flex; align-items:center; justify-content:center; gap:14px; margin-top:8px; }
   .icon-btn{
+    position:relative; overflow:hidden;
     background:none; border:none; color:var(--text); cursor:pointer;
     display:flex; align-items:center; justify-content:center;
     padding:8px; border-radius:50%; transition:background .2s ease, transform .15s ease;
@@ -204,6 +237,7 @@
   }
 
   .track-row{
+    position:relative; overflow:hidden;
     display:flex; align-items:center; gap:12px; padding:8px 10px; border-radius:16px;
     cursor:pointer; transition:background .2s ease, transform .15s ease;
     border:1px solid transparent;
@@ -250,12 +284,14 @@
   </div>
 
   <div class="card fade-up" style="animation-delay:.15s">
-    <div class="art-wrap">
+    <div class="art-wrap" id="artWrap">
       <div class="art-ring" id="artRing"></div>
       <img class="art" id="art" alt="">
     </div>
-    <div class="track-title" id="trackTitle">Pick a song below</div>
-    <div class="track-artist" id="trackArtist">—</div>
+    <div class="np-fade" id="npFade">
+      <div class="track-title-wrap"><div class="track-title" id="trackTitle">Pick a song below</div></div>
+      <div class="track-artist" id="trackArtist">—</div>
+    </div>
 
     <div class="progress-row">
       <span class="time" id="curTime">0:00</span>
@@ -312,6 +348,21 @@ function showToast(msg){
   clearTimeout(showToast._h);
   showToast._h = setTimeout(()=> t.classList.remove('show'), 2200);
 }
+
+/* ================= ripple effect ================= */
+document.addEventListener('pointerdown', (e)=>{
+  const target = e.target.closest('.icon-btn, .social-btn, .track-row');
+  if(!target) return;
+  const rect = target.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height) * 1.6;
+  const ripple = document.createElement('span');
+  ripple.className = 'ripple';
+  ripple.style.width = ripple.style.height = size + 'px';
+  ripple.style.left = (e.clientX - rect.left - size/2) + 'px';
+  ripple.style.top = (e.clientY - rect.top - size/2) + 'px';
+  target.appendChild(ripple);
+  ripple.addEventListener('animationend', ()=> ripple.remove());
+});
 
 /* =====================================================================
    YOUR PLAYLIST — edit this array directly.
@@ -425,15 +476,46 @@ function loadTrack(index, autoplay){
   if(playlist.length === 0) return;
   currentIndex = ((index % playlist.length) + playlist.length) % playlist.length;
   const track = playlist[currentIndex];
-  document.getElementById('trackTitle').textContent = track.title;
-  document.getElementById('trackArtist').textContent = track.artist;
-  document.getElementById('art').src = track.art || `https://img.youtube.com/vi/${track.id}/hqdefault.jpg`;
+  const npFade = document.getElementById('npFade');
+  const artEl = document.getElementById('art');
+
+  npFade.style.opacity = 0;
+  artEl.style.opacity = 0;
+
+  setTimeout(()=>{
+    document.getElementById('trackTitle').textContent = track.title;
+    document.getElementById('trackArtist').textContent = track.artist;
+    artEl.src = track.art || `https://img.youtube.com/vi/${track.id}/hqdefault.jpg`;
+    applyMarquee();
+    npFade.style.opacity = 1;
+    artEl.style.opacity = 1;
+  }, 220);
+
   renderPlaylist();
   resetProgressUI();
   if(playerReady && player){
     if(autoplay){ player.loadVideoById(track.id); }
     else { player.cueVideoById(track.id); }
   }
+}
+
+function applyMarquee(){
+  const wrap = document.querySelector('.track-title-wrap');
+  const title = document.getElementById('trackTitle');
+  wrap.classList.remove('marquee');
+  title.style.animation = 'none';
+  // measure after the layout settles
+  requestAnimationFrame(()=>{
+    const overflow = title.scrollWidth - wrap.clientWidth;
+    if(overflow > 4){
+      const distance = overflow + 40;
+      const duration = Math.max(6, distance / 28);
+      wrap.style.setProperty('--marquee-distance', distance + 'px');
+      wrap.style.setProperty('--marquee-duration', duration + 's');
+      title.style.animation = '';
+      wrap.classList.add('marquee');
+    }
+  });
 }
 
 function resetProgressUI(){
@@ -443,6 +525,22 @@ function resetProgressUI(){
   document.getElementById('durTime').textContent = '0:00';
 }
 
+let noteInterval = null;
+function spawnNote(){
+  const wrap = document.getElementById('artWrap');
+  if(!wrap) return;
+  const note = document.createElement('div');
+  note.className = 'note-particle';
+  note.textContent = ['♪','♫','♬'][Math.floor(Math.random()*3)];
+  const startX = 20 + Math.random()*110;
+  const drift = (Math.random()*40 - 20) + 'px';
+  note.style.left = startX + 'px';
+  note.style.bottom = '10px';
+  note.style.setProperty('--note-x', drift);
+  wrap.appendChild(note);
+  note.addEventListener('animationend', ()=> note.remove());
+}
+
 function setPlayingVisual(playing){
   document.getElementById('artRing').classList.toggle('playing', playing);
   document.getElementById('art').classList.toggle('spinning', playing);
@@ -450,6 +548,11 @@ function setPlayingVisual(playing){
   icon.innerHTML = playing
     ? '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>'
     : '<path d="M8 5v14l11-7z"/>';
+
+  clearInterval(noteInterval);
+  if(playing){
+    noteInterval = setInterval(spawnNote, 650);
+  }
 }
 
 function togglePlay(){
@@ -624,6 +727,7 @@ async function boot(){
     document.getElementById('trackTitle').textContent = playlist[currentIndex].title;
     document.getElementById('trackArtist').textContent = playlist[currentIndex].artist;
     document.getElementById('art').src = playlist[currentIndex].art || `https://img.youtube.com/vi/${playlist[currentIndex].id}/hqdefault.jpg`;
+    applyMarquee();
   }
 }
 boot();
