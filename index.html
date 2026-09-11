@@ -78,14 +78,11 @@
   .avatar img{ width:100%; height:100%; object-fit:cover; }
   .name{
     font-family:'Poppins',sans-serif; font-weight:700; font-size:22px;
-    outline:none; cursor:text; min-width:40px;
   }
   .caption{
-    font-size:13.5px; color:var(--text-dim); outline:none; cursor:text;
+    font-size:13.5px; color:var(--text-dim);
     max-width:280px; line-height:1.4;
   }
-  [contenteditable]:focus{ color:var(--text); }
-  [contenteditable]:empty:before{ content: attr(data-placeholder); color:var(--text-faint); }
 
   /* ---------- glass card base ---------- */
   .card{
@@ -201,8 +198,8 @@
       <span id="avatarInitial">Y</span>
       <img id="avatarImg" style="display:none">
     </div>
-    <div class="name" id="name" contenteditable="true" data-placeholder="Your name">Your Name</div>
-    <div class="caption" id="caption" contenteditable="true" data-placeholder="write a caption...">tell everyone what's on your mind ✨</div>
+    <div class="name" id="name">Your Name</div>
+    <div class="caption" id="caption">tell everyone what's on your mind ✨</div>
   </div>
 
   <div class="card fade-up" style="animation-delay:.15s">
@@ -254,16 +251,6 @@
 </div>
 
 <script>
-/* ================= storage helpers (best-effort, safe to fail) ================= */
-async function storeGet(key){
-  try{ const r = await window.storage.get(key, false); return r ? r.value : null; }
-  catch(e){ return null; }
-}
-async function storeSet(key, value){
-  try{ await window.storage.set(key, value, false); }
-  catch(e){ /* ignore */ }
-}
-
 function showToast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -295,7 +282,11 @@ const DEFAULT_BG_URL = 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmloOW8
 
 /* Your profile picture — paste a direct image URL here. Leave it as
    '' to just show the "Y" initial circle instead. */
-const AVATAR_URL = 'https://i.ibb.co/rGsQCbW2/793142051-122188918694070353-6218277676293890355-n.jpg';
+const AVATAR_URL = '';
+
+/* Your display name and bio — edit these directly. */
+const PROFILE_NAME = 'Your Name';
+const PROFILE_CAPTION = "tell everyone what's on your mind ✨";
 
 let currentIndex = 0;
 let isShuffle = false;
@@ -490,8 +481,6 @@ progressBar.addEventListener('touchend', ()=>{ isDraggingSeek = false; });
 /* ================= profile: name / caption ================= */
 const nameEl = document.getElementById('name');
 const captionEl = document.getElementById('caption');
-nameEl.addEventListener('blur', ()=> storeSet('profileName', nameEl.textContent.trim()));
-captionEl.addEventListener('blur', ()=> storeSet('profileCaption', captionEl.textContent.trim()));
 
 function applyBackground(url){
   const bg = document.getElementById('bg');
@@ -501,11 +490,8 @@ function applyBackground(url){
 
 /* ================= boot ================= */
 async function boot(){
-  const savedName = await storeGet('profileName');
-  const savedCaption = await storeGet('profileCaption');
-
-  if(savedName){ nameEl.textContent = savedName; }
-  if(savedCaption){ captionEl.textContent = savedCaption; }
+  nameEl.textContent = PROFILE_NAME;
+  captionEl.textContent = PROFILE_CAPTION;
   if(AVATAR_URL){
     document.getElementById('avatarImg').src = AVATAR_URL;
     document.getElementById('avatarImg').style.display = 'block';
