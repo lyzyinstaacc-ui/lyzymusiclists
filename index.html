@@ -73,16 +73,9 @@
     font-family:'Poppins',sans-serif; font-weight:700; font-size:38px; color:#fff;
     border:3px solid rgba(255,255,255,0.55);
     box-shadow:var(--shadow);
-    cursor:pointer; overflow:hidden;
-    transition:transform .25s ease;
+    overflow:hidden;
   }
-  .avatar:hover{ transform:scale(1.04); }
   .avatar img{ width:100%; height:100%; object-fit:cover; }
-  .avatar .cam{
-    position:absolute; bottom:2px; right:2px; width:26px; height:26px; border-radius:50%;
-    background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.5);
-    display:flex; align-items:center; justify-content:center; font-size:12px;
-  }
   .name{
     font-family:'Poppins',sans-serif; font-weight:700; font-size:22px;
     outline:none; cursor:text; min-width:40px;
@@ -204,11 +197,9 @@
 <div class="app">
 
   <div class="profile fade-up" style="animation-delay:.05s">
-    <div class="avatar" id="avatar" title="Tap to change photo">
+    <div class="avatar" id="avatar">
       <span id="avatarInitial">Y</span>
       <img id="avatarImg" style="display:none">
-      <div class="cam">✎</div>
-      <input type="file" id="avatarFile" accept="image/*" hidden>
     </div>
     <div class="name" id="name" contenteditable="true" data-placeholder="Your name">Your Name</div>
     <div class="caption" id="caption" contenteditable="true" data-placeholder="write a caption...">tell everyone what's on your mind ✨</div>
@@ -301,6 +292,10 @@ const playlist = [
    any time; the 🖼️ button in the app lets you override it per-device.
    ===================================================================== */
 const DEFAULT_BG_URL = 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmloOW8yYm1yYmM2eTBycDlyOTQzOWl6NHJibHRuaWtzdTJsbmt5YiZlcD12MV9naWZzX3JlbGF0ZWQmY3Q9Zw/vLi3T5m3RH45y/giphy.gif';
+
+/* Your profile picture — paste a direct image URL here. Leave it as
+   '' to just show the "Y" initial circle instead. */
+const AVATAR_URL = '';
 
 let currentIndex = 0;
 let isShuffle = false;
@@ -419,11 +414,16 @@ function onYouTubeIframeAPIReady(){
   player = new YT.Player('ytPlayer', {
     height:'1', width:'1',
     videoId: playlist.length ? playlist[currentIndex].id : undefined,
-    playerVars:{ playsinline:1 },
+    playerVars:{ playsinline:1, autoplay:1, mute:1 },
     events:{
       onReady: ()=>{
         playerReady = true;
         startProgressTimer();
+        // Browsers block autoplay with sound until the visitor interacts
+        // with the page, so we start muted and unmute on the first tap.
+        player.mute();
+        player.playVideo();
+        armAutoUnmute();
       },
       onStateChange: (e)=>{
         if(e.data === YT.PlayerState.PLAYING){ setPlayingVisual(true); }
@@ -436,6 +436,17 @@ function onYouTubeIframeAPIReady(){
       }
     }
   });
+}
+function armAutoUnmute(){
+  const unmuteOnce = ()=>{
+    if(player && player.unMute){ player.unMute(); }
+    document.removeEventListener('click', unmuteOnce);
+    document.removeEventListener('touchstart', unmuteOnce);
+    document.removeEventListener('keydown', unmuteOnce);
+  };
+  document.addEventListener('click', unmuteOnce);
+  document.addEventListener('touchstart', unmuteOnce);
+  document.addEventListener('keydown', unmuteOnce);
 }
 const ytScript = document.createElement('script');
 ytScript.src = 'https://www.youtube.com/iframe_api';
@@ -476,29 +487,11 @@ progressBar.addEventListener('touchstart', (e)=>{ isDraggingSeek = true; seekFro
 progressBar.addEventListener('touchmove', (e)=>{ if(isDraggingSeek) seekFromEvent(e); });
 progressBar.addEventListener('touchend', ()=>{ isDraggingSeek = false; });
 
-/* ================= profile: name / caption / avatar ================= */
+/* ================= profile: name / caption ================= */
 const nameEl = document.getElementById('name');
 const captionEl = document.getElementById('caption');
 nameEl.addEventListener('blur', ()=> storeSet('profileName', nameEl.textContent.trim()));
 captionEl.addEventListener('blur', ()=> storeSet('profileCaption', captionEl.textContent.trim()));
-
-const avatar = document.getElementById('avatar');
-const avatarFile = document.getElementById('avatarFile');
-avatar.addEventListener('click', ()=> avatarFile.click());
-avatarFile.addEventListener('change', (e)=>{
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = async (ev)=>{
-    const dataUrl = ev.target.result;
-    document.getElementById('avatarImg').src = dataUrl;
-    document.getElementById('avatarImg').style.display = 'block';
-    document.getElementById('avatarInitial').style.display = 'none';
-    await storeSet('avatarImg', dataUrl);
-    showToast('Profile photo updated');
-  };
-  reader.readAsDataURL(file);
-});
 
 function applyBackground(url){
   const bg = document.getElementById('bg');
@@ -510,12 +503,11 @@ function applyBackground(url){
 async function boot(){
   const savedName = await storeGet('profileName');
   const savedCaption = await storeGet('profileCaption');
-  const savedAvatar = await storeGet('avatarImg');
 
   if(savedName){ nameEl.textContent = savedName; }
   if(savedCaption){ captionEl.textContent = savedCaption; }
-  if(savedAvatar){
-    document.getElementById('avatarImg').src = savedAvatar;
+  if(AVATAR_URL){
+    document.getElementById('avatarImg').src = AVATAR_URL;
     document.getElementById('avatarImg').style.display = 'block';
     document.getElementById('avatarInitial').style.display = 'none';
   }
