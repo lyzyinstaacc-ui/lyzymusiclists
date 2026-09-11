@@ -63,6 +63,8 @@
 
   .fade-up{ opacity:0; transform:translateY(16px); animation:fadeUp .7s cubic-bezier(.2,.7,.3,1) forwards; }
   @keyframes fadeUp{ to{opacity:1; transform:translateY(0);} }
+  .floaty{ animation:floatY 4.6s ease-in-out infinite; }
+  @keyframes floatY{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-6px); } }
 
   /* ---------- profile ---------- */
   .profile{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:10px; }
@@ -109,7 +111,10 @@
   }
 
   /* ---------- now playing ---------- */
-  .art-wrap{ position:relative; width:150px; height:150px; margin:0 auto 16px; }
+  .art-wrap{
+    position:relative; width:150px; height:150px; margin:0 auto 16px;
+    transition:transform .15s ease-out; will-change:transform;
+  }
   .art-ring{
     position:absolute; inset:-8px; border-radius:50%;
     background:conic-gradient(from 0deg, var(--accent1), var(--accent2), var(--accent1));
@@ -192,6 +197,11 @@
     box-shadow:0 6px 18px rgba(255,122,89,0.45);
   }
   .icon-btn.play:hover{ background:linear-gradient(135deg,var(--accent1),var(--accent2)); filter:brightness(1.08); }
+  .icon-btn.play.playing{ animation:playPulse 1.8s ease-in-out infinite; }
+  @keyframes playPulse{
+    0%,100%{ box-shadow:0 6px 18px rgba(255,122,89,0.45); }
+    50%{ box-shadow:0 6px 26px rgba(255,122,89,0.75), 0 0 0 7px rgba(255,196,87,0.18); }
+  }
 
   .volume-row{ display:flex; align-items:center; gap:10px; margin-top:14px; padding:0 6px; color:var(--text-dim); }
   .volume-row input[type="range"]{
@@ -216,10 +226,24 @@
   }
 
   /* ---------- playlist ---------- */
+  .playlist-header-row{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:12px; gap:10px;
+  }
   .playlist-header{
     font-family:'Poppins',sans-serif; font-weight:600; font-size:15px;
-    margin-bottom:12px; color:var(--text);
+    color:var(--text);
   }
+  .playlist-count{ font-weight:400; font-size:12px; color:var(--text-faint); }
+  .shuffle-all-btn{
+    display:flex; align-items:center; gap:6px; flex-shrink:0;
+    background:var(--glass); border:1px solid var(--border); border-radius:20px;
+    padding:6px 12px; font-size:11.5px; font-weight:500; color:var(--text-dim);
+    cursor:pointer; transition:background .2s ease, color .2s ease, transform .15s ease;
+    position:relative; overflow:hidden;
+  }
+  .shuffle-all-btn:hover{ background:var(--glass-strong); color:var(--text); }
+  .shuffle-all-btn:active{ transform:scale(0.95); }
   .playlist-list{
     display:flex; flex-direction:column; gap:6px;
     max-height:300px; overflow-y:auto;
@@ -238,10 +262,17 @@
 
   .track-row{
     position:relative; overflow:hidden;
-    display:flex; align-items:center; gap:12px; padding:8px 10px; border-radius:16px;
+    display:flex; align-items:center; gap:12px; padding:10px; border-radius:16px;
     cursor:pointer; transition:background .2s ease, transform .15s ease;
     border:1px solid transparent;
   }
+  .track-row:not(:last-child){ border-bottom:1px solid rgba(255,255,255,0.08); }
+  .track-row.row-enter{
+    opacity:0; transform:translateY(10px);
+    animation:rowEnter .45s cubic-bezier(.2,.7,.3,1) forwards;
+  }
+  @keyframes rowEnter{ to{ opacity:1; transform:translateY(0); } }
+  .track-duration{ font-size:11px; color:var(--text-faint); flex-shrink:0; font-variant-numeric:tabular-nums; }
   .track-row:hover{ background:rgba(255,255,255,0.1); }
   .track-row.active{
     background:rgba(255,255,255,0.16); border-color:var(--border);
@@ -286,7 +317,7 @@
   <div class="card fade-up" style="animation-delay:.15s">
     <div class="art-wrap" id="artWrap">
       <div class="art-ring" id="artRing"></div>
-      <img class="art" id="art" alt="">
+      <img class="art" id="art" alt="" onerror="this.onerror=null; this.src=FALLBACK_ART;">
     </div>
     <div class="np-fade" id="npFade">
       <div class="track-title-wrap"><div class="track-title" id="trackTitle">Pick a song below</div></div>
@@ -327,7 +358,13 @@
   </div>
 
   <div class="card fade-up" style="animation-delay:.25s">
-    <div class="playlist-header">Many more</div>
+    <div class="playlist-header-row">
+      <div class="playlist-header">Many more <span class="playlist-count" id="playlistCount"></span></div>
+      <button class="shuffle-all-btn" id="shuffleAllBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+        Shuffle all
+      </button>
+    </div>
     <div class="playlist-wrap">
       <div class="playlist-list" id="playlistList"></div>
     </div>
@@ -371,16 +408,18 @@ document.addEventListener('pointerdown', (e)=>{
    "art" is optional — a direct image URL to use as the cover art
    instead of the auto-fetched YouTube thumbnail. Leave it out (or
    delete the line) to just use the YouTube thumbnail.
+   "duration" is optional — e.g. '2:47' — shown on the right side of
+   each row. Leave it as '' to hide it for that track.
    ===================================================================== */
 const playlist = [
-  { id:'OmLdvsZAqq4', title:'mosi mosi?', artist:'Sasane', art:'' },
-  { id:'cswfR85D7jM', title:'Love Me Not', artist:'Ravyn Lenae', art:'' },
-  { id:'VK5-e_w4gMU', title:'Magnetic', artist:'ILLIT', art:'' },
-  { id:'FW3Uqdx1vF8', title:'mosi mosi?', artist:'Leesol & Sasane', art:'' },
-  { id:'uiBiKC0TC3I', title:'otukare', artist:'Sasane', art:'' },
-  { id:'NY1TyFUhbMA', title:'愛とU', artist:'Mega Shinnosuke', art:'' },
-  { id:'NOiyDlWl534', title:'캐치 캐치', artist:'Yena', art:'' },
-  { id:'lSD_L-xic9o', title:'From The Start', artist:'Laufey', art:'' }
+  { id:'OmLdvsZAqq4', title:'mosi mosi?', artist:'Sasane', art:'', duration:'' },
+  { id:'cswfR85D7jM', title:'Love Me Not', artist:'Ravyn Lenae', art:'', duration:'' },
+  { id:'VK5-e_w4gMU', title:'Magnetic', artist:'ILLIT', art:'', duration:'' },
+  { id:'FW3Uqdx1vF8', title:'mosi mosi?', artist:'Leesol & Sasane', art:'', duration:'' },
+  { id:'uiBiKC0TC3I', title:'otukare', artist:'Sasane', art:'', duration:'' },
+  { id:'NY1TyFUhbMA', title:'愛とU', artist:'Mega Shinnosuke', art:'', duration:'' },
+  { id:'NOiyDlWl534', title:'캐치 캐치', artist:'Yena', art:'', duration:'' },
+  { id:'lSD_L-xic9o', title:'From The Start', artist:'Laufey', art:'', duration:'' }
 ];
 
 /* =====================================================================
@@ -404,10 +443,10 @@ const PROFILE_CAPTION = "Ai Builder | Roblox Game Developer| Software Developer 
    youtube, discord, x, facebook, twitch, spotify).
    ===================================================================== */
 const SOCIAL_LINKS = [
-  { name:'facebook', url:'https://www.facebook.com/kimrainmendez/' },
-  { name:'roblox', url:'https://www.roblox.com/users/868586604/profile' },
-  { name:'github', url:'https://github.com/Lyzy01' },
-  { name:'guns', url:'' },
+  { name:'instagram', url:'' },
+  { name:'tiktok', url:'' },
+  { name:'youtube', url:'' },
+  { name:'discord', url:'' },
   { name:'x', url:'' }
 ];
 
@@ -427,23 +466,40 @@ function fmtTime(sec){
 }
 
 /* ================= render playlist ================= */
+const FALLBACK_ART = 'data:image/svg+xml,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
+  '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+  '<stop offset="0" stop-color="#FF7A59"/><stop offset="1" stop-color="#FFC857"/>' +
+  '</linearGradient></defs>' +
+  '<rect width="100" height="100" fill="url(#g)"/>' +
+  '<text x="50" y="63" font-size="42" text-anchor="middle" fill="white">%E2%99%AB</text></svg>'
+);
+
+let playlistFirstRender = true;
 function renderPlaylist(){
   const list = document.getElementById('playlistList');
+  const countEl = document.getElementById('playlistCount');
+  if(countEl) countEl.textContent = `· ${playlist.length} song${playlist.length === 1 ? '' : 's'}`;
   list.innerHTML = '';
   playlist.forEach((track, i)=>{
     const row = document.createElement('div');
-    row.className = 'track-row' + (i === currentIndex ? ' active' : '');
+    row.className = 'track-row' + (i === currentIndex ? ' active' : '') + (playlistFirstRender ? ' row-enter' : '');
+    if(playlistFirstRender){ row.style.animationDelay = (i * 0.06) + 's'; }
     row.innerHTML = `
       <img class="track-thumb" src="${track.art || `https://img.youtube.com/vi/${track.id}/default.jpg`}" alt="">
       <div class="track-meta">
         <div class="t">${escapeHtml(track.title)}</div>
         <div class="a">${escapeHtml(track.artist)}</div>
       </div>
+      ${track.duration ? `<div class="track-duration">${escapeHtml(track.duration)}</div>` : ''}
       ${i === currentIndex ? '<div class="eq"><span></span><span></span><span></span></div>' : ''}
     `;
+    const thumb = row.querySelector('.track-thumb');
+    thumb.addEventListener('error', function(){ this.onerror = null; this.src = FALLBACK_ART; }, { once:true });
     row.addEventListener('click', ()=> loadTrack(i, true));
     list.appendChild(row);
   });
+  playlistFirstRender = false;
 }
 
 function escapeHtml(s){
@@ -544,6 +600,7 @@ function spawnNote(){
 function setPlayingVisual(playing){
   document.getElementById('artRing').classList.toggle('playing', playing);
   document.getElementById('art').classList.toggle('spinning', playing);
+  document.getElementById('playBtn').classList.toggle('playing', playing);
   const icon = document.getElementById('playIcon');
   icon.innerHTML = playing
     ? '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>'
@@ -647,6 +704,15 @@ document.getElementById('shuffleBtn').addEventListener('click', (e)=>{
   e.currentTarget.classList.toggle('active', isShuffle);
   showToast(isShuffle ? 'Shuffle on' : 'Shuffle off');
 });
+document.getElementById('shuffleAllBtn').addEventListener('click', ()=>{
+  if(playlist.length === 0) return;
+  isShuffle = true;
+  document.getElementById('shuffleBtn').classList.add('active');
+  let next;
+  do{ next = Math.floor(Math.random()*playlist.length); } while(playlist.length > 1 && next === currentIndex);
+  loadTrack(next, true);
+  showToast('Shuffling your playlist');
+});
 document.getElementById('repeatBtn').addEventListener('click', (e)=>{
   isRepeat = !isRepeat;
   e.currentTarget.classList.toggle('active', isRepeat);
@@ -731,6 +797,32 @@ async function boot(){
   }
 }
 boot();
+
+/* ================= gentle float after entrance ================= */
+document.querySelectorAll('.fade-up').forEach((el, i)=>{
+  el.addEventListener('animationend', function handler(e){
+    if(e.animationName !== 'fadeUp') return;
+    el.removeEventListener('animationend', handler);
+    el.style.animationDuration = (4.2 + i * 0.6) + 's';
+    el.classList.remove('fade-up');
+    el.classList.add('floaty');
+  });
+});
+
+/* ================= album art mouse tilt ================= */
+const artWrapEl = document.getElementById('artWrap');
+artWrapEl.addEventListener('mousemove', (e)=>{
+  const rect = artWrapEl.getBoundingClientRect();
+  const relX = (e.clientX - rect.left) / rect.width - 0.5;
+  const relY = (e.clientY - rect.top) / rect.height - 0.5;
+  const rotateY = relX * 20;
+  const rotateX = relY * -20;
+  artWrapEl.style.transform = `perspective(400px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+});
+artWrapEl.addEventListener('mouseleave', ()=>{
+  artWrapEl.style.transform = 'perspective(400px) rotateX(0) rotateY(0)';
+});
+
 </script>
 </body>
 </html>
