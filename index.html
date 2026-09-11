@@ -154,7 +154,13 @@
     font-family:'Poppins',sans-serif; font-weight:600; font-size:15px;
     margin-bottom:12px; color:var(--text);
   }
-  .playlist-list{ display:flex; flex-direction:column; gap:6px; max-height:320px; overflow-y:auto; }
+  .playlist-list{
+    display:flex; flex-direction:column; gap:6px;
+    max-height:52vh; overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    touch-action:pan-y;
+  }
   .playlist-list::-webkit-scrollbar{ width:4px; }
   .playlist-list::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.25); border-radius:4px; }
 
@@ -270,7 +276,7 @@ function showToast(msg){
 const playlist = [
   { id:'OmLdvsZAqq4', title:'mosi mosi?', artist:'Sasane', art:'' },
   { id:'cswfR85D7jM', title:'Love Me Not', artist:'Ravyn Lenae', art:'' },
-  { id:'Vk5-c_v4gMU', title:'Magnetic', artist:'ILLIT', art:'' },
+  { id:'VK5-e_w4gMU', title:'Magnetic', artist:'ILLIT', art:'' },
   { id:'FW3Uqdx1vF8', title:'mosi mosi?', artist:'Leesol & Sasane', art:'' },
   { id:'uiBiKC0TC3I', title:'otukare', artist:'Sasane', art:'' },
   { id:'NY1TyFUhbMA', title:'愛とU', artist:'Mega Shinnosuke', art:'' },
