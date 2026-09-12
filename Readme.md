@@ -47,5 +47,7 @@ from this GitHub repo on every push to the main branch.
 
 ## License
 
-All rights reserved — see [`LICENSE`](./LICENSE). This code is not
-open source; please don't copy or redistribute it without permission.
+Free to copy and modify — see [`LICENSE`](./LICENSE) — but any copy or
+derivative must keep a visible "© Lyzy" credit on the page. This isn't
+open source in the usual sense (MIT/GPL etc.); it's a custom
+attribution license specific to this project.
